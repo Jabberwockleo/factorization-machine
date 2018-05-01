@@ -30,6 +30,25 @@ def evaluate_classification(model, X_test, y_test):
     print('auc:', roc_auc_score(y_test, y_pred_proba))
     return y_pred_proba
 
+def load_dataset_raw(fname):
+    """
+        Create MF dataset
+        File format:
+            uid sid rating timestamp
+        Note:
+            uid and sid starts from 1
+    """
+    user = []
+    item = []
+    score = []
+    with open(fname, 'r') as f:
+        elems = csv.reader(f, delimiter='\t')
+        for uid, sid, rating, timestamp in elems:
+            user.append(int(uid) - 1)
+            item.append(int(sid) - 1)
+            score.append(int(rating))
+    return np.array(user), np.array(item), np.array(score).astype('float32')
+
 def load_dataset_mf(fname, user_cnt, item_cnt, entry_cnt):
     """
         Create MF dataset
