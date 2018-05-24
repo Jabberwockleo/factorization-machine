@@ -113,3 +113,62 @@ def load_dataset_svd(fname, user_cnt, item_cnt, entry_cnt):
             ent_idx += 1
     Y = np.array(Y).astype('float32')
     return X, Y
+
+
+def yield_uid_sids_from_file(fn):
+    """
+        Generator
+    """
+    fd = open(fn, "r")
+    for line in fd:
+        elems = line.rstrip().split(',')
+        uid = elems[0]
+        sids = set()
+        for sid in elems[1].split('|'):
+            if sid != '':
+                sids.add(sid)
+        yield uid, sids
+    fd.close()
+
+
+def make_sid_count_dict(fn):
+    """
+        Count
+    """
+    from collections import defaultdict
+    sid_cnt_dict = defaultdict(int)
+    for uid, sids in yield_uid_sids_from_file(fn):
+        for sid in sids:
+            sid_cnt_dict[sid] += 1
+    return sid_cnt_dict
+
+
+def make_sid_index(sid_cnt_dict):
+    """
+        Sort
+    """
+    import operator
+    return sorted(sid_cnt_dict.items(), key=operator.itemgetter(1), reverse=True)
+
+
+def make_index(fn):
+    """
+        Index
+    """
+    idx2uid = {}
+    uid2idx = {}
+    idx2sid = {}
+    sid2idx = {}
+    idx = 1
+    for uid, _ in yield_uid_sids_from_file(fn):
+        idx2uid[idx] = uid
+        uid2idx[uid] = idx
+        idx += 1
+    sid_index_arr = make_sid_index(make_sid_count_dict(fn))
+    idx = 1
+    for sid, _ in sid_index_arr:
+        idx2sid[idx] = sid
+        sid2idx[sid] = idx
+        idx += 1
+    return idx2uid, uid2idx, idx2sid, sid2idx
+
