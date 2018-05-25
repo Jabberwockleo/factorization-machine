@@ -172,3 +172,20 @@ def make_index(fn):
         idx += 1
     return idx2uid, uid2idx, idx2sid, sid2idx
 
+
+def make_uid_sids_dict(fn):
+    """
+        uid -> sids
+    """
+    uid_sids_dict = {}
+    for uid, sids in yield_uid_sids_from_file(fn):
+        uid_sids_dict[uid] = sids
+    return uid_sids_dict
+
+
+def negative_sample(uid, uid_sids_dict, idx2sid):
+    """
+        Negative sampling
+    """
+    import random
+    return random.sample(list(idx2sid.values()), len(uid_sids_dict[uid]))
