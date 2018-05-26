@@ -272,3 +272,41 @@ def predict_uid_sid_analytically(model, uid, sid, idx2uid, uid2idx, idx2sid, sid
     sv = get_sid_vec(model, sid, uid2idx, sid2idx)
     return np.sum(uv * sv) + model.w0_ + model.w_[int(uid2idx[uid] - 1)]\
         + model.w_[len(uid2idx.values()) + int(sid2idx[sid] - 1)]
+
+
+def get_topn(model, idx2uid, uid2idx, idx2sid, sid2idx, top_n=20):
+    """
+        Get topn in each latent dims
+    """
+    user_cnt = len(uid2idx.values())
+    item_cnt = len(sid2idx.values())
+    item_mat = model.V_.T[user_cnt:user_cnt + item_cnt][:].T
+    grouped_top_n = []
+    for group_idx in range(np.shape(item_mat)[0]):
+        dim_view = item_mat[group_idx][:]
+        uididx_pairs = zip(dim_view.tolist(), range(1, item_cnt + 1))
+        top_list = sorted(uididx_pairs, key=lambda x:x[0], reverse=True)[:top_n]
+        grouped_top_n.append(top_list)
+    return grouped_top_n
+
+
+def describe_sid_iterable(iterable):
+    """
+        Tag description
+    """
+    import sid.resource_tag_readonly as tag
+    for sid in iterable:
+        yield sid, tag.get(sid)
+
+
+def describe_grouped_top_n(grouped_top_n, idx2sid):
+    """
+        Group topn description
+    """
+    description_arr = []
+    for group_id in range(len(grouped_top_n)):
+        group = grouped_top_n[group_id]
+        scores, sididxs = zip(*group)
+        sids = map(lambda x:idx2sid[x], sididxs)
+        description_arr.append(zip(scores, list(describe_sid_iterable(sids))))
+    return description_arr
