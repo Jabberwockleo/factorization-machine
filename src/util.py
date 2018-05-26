@@ -310,3 +310,29 @@ def describe_grouped_top_n(grouped_top_n, idx2sid):
         sids = map(lambda x:idx2sid[x], sididxs)
         description_arr.append(zip(scores, list(describe_sid_iterable(sids))))
     return description_arr
+
+
+def recommend_mf(model, uid, idx2uid, uid2idx, idx2sid, sid2idx, uid_sids_dict, top_n=50):
+    """
+        Recommend using matrix factorization
+    """
+    from scipy import sparse
+    recom_list = []
+    sids_set = uid_sids_dict[uid]
+    user_cnt = len(uid2idx.values())
+    item_cnt = len(sid2idx.values())
+    uididx = int(uid2idx[uid])
+    X = sparse.lil_matrix((item_cnt, user_cnt + item_cnt)).astype('float32')
+    for sididx in range(1, item_cnt + 1):
+        X[sididx - 1, uididx - 1] = 1
+        X[sididx - 1, user_cnt + sididx - 1] = 1
+    y = model.predict(X)
+    user_item_affinity = zip(y, list(range(1, item_cnt + 1)))
+    user_item_affinity = sorted(user_item_affinity, key=lambda x:x[0], reverse=True)
+    for score, sididx in user_item_affinity:
+        sid = idx2sid[sididx]
+        if sid not in sids_set:
+            recom_list.append(tuple([score, sid]))
+            if len(recom_list) == top_n:
+                break
+    return recom_list
