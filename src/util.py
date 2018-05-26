@@ -189,3 +189,60 @@ def negative_sample(uid, uid_sids_dict, idx2sid):
     """
     import random
     return random.sample(list(idx2sid.values()), len(uid_sids_dict[uid]))
+
+
+def make_train_dev_files(idx2uid, uid2idx, idx2sid, sid2idx, uid_sids_dict):
+    """
+        Create train dev files from uid sids info
+    """
+    from sklearn.model_selection import train_test_split
+    import numpy as np
+    fdt = open('fm_train.txt', 'w')
+    fdd = open('fm_dev.txt', 'w')
+    for uid, sids in uid_sids_dict.items():
+        pos_sids = list(sids)
+        pos_ratings = np.ones(len(pos_sids), dtype=int)
+        neg_sids = negative_sample(uid, uid_sids_dict, idx2sid)
+        neg_ratings = np.zeros(len(neg_sids), dtype=int)
+        X = pos_sids + neg_sids
+        y = pos_ratings.tolist() + neg_ratings.tolist()
+        X_train, X_dev, y_train, y_dev = train_test_split(X, y, test_size=0.2)
+        for xt, yt in zip(X_train, y_train):
+            fdt.write('{}\t{}\t{}\t{}\n'.format(uid2idx[uid], sid2idx[xt], str(yt), '0'))
+        for xd, yd in zip(X_dev, y_dev):
+            fdd.write('{}\t{}\t{}\t{}\n'.format(uid2idx[uid], sid2idx[xd], str(yd), '0'))
+    fdt.close()
+    fdd.close()
+
+
+def count_user_item_entry(fn):
+    """
+        Count user item entry in file
+    """
+    import csv
+    entry_cnt = 0
+    max_user_idx = 0
+    max_item_idx = 0
+    with open(fn, 'r') as f:
+        elems = csv.reader(f, delimiter='\t')
+        for uididx, sididx, rating, timestamp in elems:
+            entry_cnt += 1
+            max_user_idx = max(max_user_idx, int(uididx))
+            max_item_idx = max(max_item_idx, int(sididx))
+    return max_user_idx, max_item_idx, entry_cnt
+
+
+def predict_uid_sid(model, uid, sids, idx2uid, uid2idx, idx2sid, sid2idx):
+    """
+        Predict
+    """
+    from scipy import sparse
+    uididx = int(uid2idx[uid])
+    X = sparse.lil_matrix((len(sids), len(idx2uid.values()) + len(idx2sid.values()))).astype('float32')
+    idx = 0
+    for sid in sids:
+        sididx = int(sid2idx[sid])
+        X[idx, uididx - 1] = 1
+        X[idx, sididx - 1] = 1
+        idx += 1
+    return model.predict(X)
