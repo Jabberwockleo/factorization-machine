@@ -238,11 +238,12 @@ def predict_uid_sid(model, uid, sids, idx2uid, uid2idx, idx2sid, sid2idx):
     """
     from scipy import sparse
     uididx = int(uid2idx[uid])
+    user_cnt = len(idx2uid.values())
     X = sparse.lil_matrix((len(sids), len(idx2uid.values()) + len(idx2sid.values()))).astype('float32')
     idx = 0
     for sid in sids:
         sididx = int(sid2idx[sid])
         X[idx, uididx - 1] = 1
-        X[idx, sididx - 1] = 1
+        X[idx, user_cnt + sididx - 1] = 1
         idx += 1
     return model.predict(X)
