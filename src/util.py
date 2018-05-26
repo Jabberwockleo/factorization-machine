@@ -247,3 +247,28 @@ def predict_uid_sid(model, uid, sids, idx2uid, uid2idx, idx2sid, sid2idx):
         X[idx, user_cnt + sididx - 1] = 1
         idx += 1
     return model.predict(X)
+
+
+def get_uid_vec(model, uid, uid2idx, sid2idx):
+    """
+        Uid vec getter
+    """
+    return model.V_.T[int(uid2idx[uid] - 1)]
+
+
+def get_sid_vec(model, sid, uid2idx, sid2idx):
+    """
+        Sid vec getter
+    """
+    user_cnt = len(uid2idx.values())
+    return model.V_.T[user_cnt + int(sid2idx[sid] - 1)]
+
+
+def predict_uid_sid_analytically(model, uid, sid, idx2uid, uid2idx, idx2sid, sid2idx):
+    """
+        Predict Analytically
+    """
+    uv = get_uid_vec(model, uid, uid2idx, sid2idx)
+    sv = get_sid_vec(model, sid, uid2idx, sid2idx)
+    return np.sum(uv * sv) + model.w0_ + model.w_[int(uid2idx[uid] - 1)]\
+        + model.w_[len(uid2idx.values()) + int(sid2idx[sid] - 1)]
