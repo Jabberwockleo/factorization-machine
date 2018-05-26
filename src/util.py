@@ -95,7 +95,8 @@ def load_dataset_svd(fname, user_cnt, item_cnt, entry_cnt):
             else:
                 uservec = user_dict[uid]
                 rows, cols = ratvec.nonzero()
-                uservec[rows[0], cols[0]] = 0
+                if len(rows) > 0:
+                    uservec[rows[0], cols[0]] = 0
                 uservec += ratvec
                 user_dict[uid] = uservec
     for uid, ratvec in user_dict.items():
@@ -170,7 +171,7 @@ def make_index(fn):
         idx2sid[idx] = sid
         sid2idx[sid] = idx
         idx += 1
-    return idx2uid, uid2idx, idx2sid, sid2idx
+    return tuple([idx2uid, uid2idx, idx2sid, sid2idx])
 
 
 def make_uid_sids_dict(fn):
@@ -239,7 +240,8 @@ def predict_uid_sid(model, uid, sids, idx2uid, uid2idx, idx2sid, sid2idx):
     from scipy import sparse
     uididx = int(uid2idx[uid])
     user_cnt = len(idx2uid.values())
-    X = sparse.lil_matrix((len(sids), len(idx2uid.values()) + len(idx2sid.values()))).astype('float32')
+    X = sparse.lil_matrix((len(sids),
+        len(idx2uid.values()) + len(idx2sid.values()))).astype('float32')
     idx = 0
     for sid in sids:
         sididx = int(sid2idx[sid])
@@ -274,7 +276,7 @@ def predict_uid_sid_analytically(model, uid, sid, idx2uid, uid2idx, idx2sid, sid
         + model.w_[len(uid2idx.values()) + int(sid2idx[sid] - 1)]
 
 
-def get_topn(model, idx2uid, uid2idx, idx2sid, sid2idx, top_n=20):
+def get_top_n(model, idx2uid, uid2idx, idx2sid, sid2idx, top_n=20):
     """
         Get topn in each latent dims
     """
