@@ -352,13 +352,13 @@ def recommend_svdpp(model, uid, idx2uid, uid2idx, idx2sid, sid2idx, uid_sids_dic
     uididx = int(uid2idx[uid])
     X = sparse.lil_matrix((item_cnt, user_cnt + item_cnt*2)).astype('float32')
 
-    # get user history factor slice
+    # get user history factor slice, assuming ratings are 1
     user_history_factor = sparse.lil_matrix((1, user_cnt + item_cnt*2)).astype('float32')
-    for i in range(np.shape(model.V_.T)[0]):
-        if model.V_.T[i][i] == 1:
-            user_history_factor[user_cnt + item_cnt : user_cnt + item_cnt*2] += \
-                model.V_.T[i][user_cnt + item_cnt : user_cnt + item_cnt*2]
-            break
+    for sid in uid_sids_dict[uid]:
+        sididx = sid2idx[sid]
+        user_history_factor[0, user_cnt + item_cnt + sididx - 1] = 1
+    if user_history_factor.count_nonzero() > 0:
+        user_history_factor /= np.sqrt(user_history_factor.count_nonzero())
     
     for sididx in range(1, item_cnt + 1):
         X[sididx - 1, uididx - 1] = 1
@@ -374,3 +374,31 @@ def recommend_svdpp(model, uid, idx2uid, uid2idx, idx2sid, sid2idx, uid_sids_dic
             if len(recom_list) == top_n:
                 break
     return recom_list
+
+
+def predict_uid_sid_svdpp(model, uid, sids, idx2uid, uid2idx, idx2sid, sid2idx, uid_sids_dict):
+    """
+        Prediction using svdpp
+    """
+    from scipy import sparse
+    uididx = int(uid2idx[uid])
+    user_cnt = len(uid2idx.values())
+    item_cnt = len(sid2idx.values())
+    X = sparse.lil_matrix((len(sids), user_cnt + item_cnt*2)).astype('float32')
+    
+    # get user history factor slice, assuming ratings are 1
+    user_history_factor = sparse.lil_matrix((1, user_cnt + item_cnt*2)).astype('float32')
+    for sid in uid_sids_dict[uid]:
+        sididx = sid2idx[sid]
+        user_history_factor[0, user_cnt + item_cnt + sididx - 1] = 1
+    if user_history_factor.count_nonzero() > 0:
+        user_history_factor /= np.sqrt(user_history_factor.count_nonzero())
+    
+    idx = 0
+    for sid in sids:
+        sididx = int(sid2idx[sid])
+        X[idx, uididx - 1] = 1
+        X[idx, user_cnt + sididx - 1] = 1
+        X[idx - 1] += user_history_factor
+        idx += 1
+    return model.predict(X)
